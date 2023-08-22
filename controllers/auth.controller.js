@@ -9,89 +9,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 dotenv.config();
 
-export const reg = async (req, res, next) => {
-  let { username, email, password, dateOfBirth } = req.body;
-  username = username.trim();
-  email = email.trim();
-  password = password.trim();
-  dateOfBirth;
 
-  if (username == "" || email == "" || password == "" || dateOfBirth == "") {
-    res.json({
-      status: "FAILED",
-      message: "EMPTY INPUT FIELDS",
-    });
-  } else if (!/^[a-zA-Z]*$/.test(username)) {
-    res.json({
-      status: "FAILED",
-      message: "INVALID USERNAME ENTERED",
-    });
-  } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
-    res.json({
-      status: "FAILED",
-      message: "INVALID EMAIL ENTERED",
-    });
-  } else if (!new Date(dateOfBirth).getTime()) {
-    res.json({
-      status: "FAILED",
-      message: "INVALID DATE OF BIRTH ENTERED",
-    });
-  } else if (password.length < 8) {
-    res.json({
-      status: "FAILED",
-      message: "PASSWORD SHOULD BE MORE THAN 8 CHARACTERS",
-    });
-  } else {
-    // TRY CREATE NEW USER
-    //try {
-    const user = await User.findOne({ email });
-    if (user) {
-      res.json({
-        status: "FAILED",
-        message: "USER ALREADY EXIST",
-      });
-    } else {
-      // PASSWORD HANDLING
-      // try {
-      const hash = await bcrypt.hash(req.body.password, 5);
-      const newUser = new User({
-        ...req.body,
-        password: hash,
-      });
-      console.log("OBAA1");
-
-      const { password, ...otherInfo } = newUser._doc;
-      await newUser.save().then((result) => {
-        sendVerificationEmail(result, res);
-      });
-      // .catch(
-      //   res.json({
-      //     status: "FAILED",
-      //     message: "ERROR OCCURED WHILE SAVING USER TO DATABASE",
-      //   })
-      // );
-
-      //HANDLE EMAIL VERIFICATION
-      console.log("OBAA2");
-      // res.json({
-      //   status: "SUCCESS",
-      //   message: "ACCOUNT CREATED SUCCESSFULLY",
-      // });
-      // } catch (error) {
-      //   res.json({
-      //     status: "FAILED",
-      //     message: "ERROR OCCURED WHILE HASHING THE PASSWORD",
-      //   });
-      // }
-    }
-    // } catch (error) {
-    //   res.json({
-    //     status: "FAILED",
-    //     message: "ERROR OCCURED WHILE CHECKING FOR USER EXISTENCE",
-    //   });
-    // }
-  }
-};
 
 export const verify = async (req, res) => {
   let { userId, uniqueString } = req.params;
@@ -194,7 +112,7 @@ export const verified = async (req, res) => {
   }
 };
 
-export const log = async (req, res) => {
+export const login = async (req, res) => {
   let { email, password } = req.body;
   email = email.trim();
   password = password.trim();
@@ -320,13 +238,6 @@ export const sendVerificationEmail = async (user, res) => {
 
 export const register = async (req, res, next) => {
   try {
-    // let transporter = nodemailer.createTransport({
-    //   service: "gmail",
-    //   auth: {
-    //     user: process.env.AUTH_EMAIL,
-    //     pass: process.env.AUTH_EMAIL_PASSWORD,
-    //   },
-    // });
 
     const hash = await bcrypt.hash(req.body.password, 5);
     const newUser = new User({
@@ -337,59 +248,13 @@ export const register = async (req, res, next) => {
     await newUser.save().then((result) => {
       sendVerificationEmail(result, res);
     });
-    // const mailOptions = {
-    //   from: "process.env.AUTH_EMAIL",
-    //   to: newUser.email,
-    //   subject: "Verify your Email",
-    //   html: `<p>Verify your email to complete the registeration process successfully and start loggin in whenever you want!</p>
-    //       <p><b>This link expires in 3 hours.</b></p><p>Press <a href=${
-    //         "http:localhost:3000/api/auths/verify" + _id + 2222 + "/"
-    //       }> here</a> to proceed. </p>
-    //       `,
-    // };
-
-    // transporter.sendMail(mailOptions, (err, result) => {
-    //   if (err) {
-    //     console.log(err);
-    //     res.json("Opps error occured");
-    //   } else {
-    //     res.json("thanks for e-mailing me");
-    //   }
-    // });
-    //res.status(201).send("USER HAS BEEN CREATED");
+    
   } catch (error) {
     next(error);
   }
 };
 
-export const login = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ username: req.body.username });
-    console.log(user);
-    if (!user) return next(createError(404, "User not found"));
 
-    const isCorrect = await bcrypt.compare(req.body.password, user.password);
-    if (!isCorrect)
-      return next(createError(400, "PASSWORD OR USERNAME IS INCORRECT"));
-
-    const token = jwt.sign(
-      {
-        id: user._id,
-      },
-      process.env.JWT_KEY
-    );
-
-    const { password, ...otherInfo } = user._doc;
-    res
-      .cookie("accessToken", token, {
-        httpOnly: true,
-      })
-      .status(200)
-      .send(otherInfo);
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const logout = async (req, res) => {
   res
